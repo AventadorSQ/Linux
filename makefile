@@ -1,2 +1,2 @@
-main:AddNum.c
-	g++ $^ -o $@
+main:main.c
+	gcc $^ -o $@
