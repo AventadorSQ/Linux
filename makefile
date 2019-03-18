@@ -1,2 +1,2 @@
-main:exit.c
-	g++ $^ -o $@
+main:env.c
+	gcc $^ -o $@
