@@ -1,2 +1,2 @@
-main:zone.cpp
+main:exit.c
 	g++ $^ -o $@
