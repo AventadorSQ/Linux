@@ -1,2 +1,2 @@
-main:main.c
-	gcc $^ -o $@
+main:zone.cpp
+	g++ $^ -o $@
