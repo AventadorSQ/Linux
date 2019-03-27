@@ -1,2 +1,2 @@
-main:env.c
+mian:malloc.c
 	gcc $^ -o $@
