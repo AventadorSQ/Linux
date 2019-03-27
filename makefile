@@ -1,2 +1,2 @@
-mian:malloc.c
+main:mshell.c
 	gcc $^ -o $@
