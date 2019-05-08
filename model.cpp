@@ -106,15 +106,17 @@ int dataS = 0;
 void* customer(void* arg)
 {
 	//BlockQueue* q = (BlockQueue*)arg;
-	int tmp = reinterpret_cast<long long>(arg);
+	int tmp = reinterpret_cast<long>(arg);
+
+	sleep(1);
 	while(1)
 	{
 		int data;
 		//pthread_mutex_lock(&_mutex);
 		q.QueuePop(&data);
-		//pthread_mutex_unlock(&_mutex);
 		//cout<< "--------("<< (int)arg <<")号消费者拿到数据:" << data <<endl;
 		printf("~~~~~(%d)号消费者拿到数据:%d\n", tmp, data);
+		//pthread_mutex_unlock(&_mutex);
 		//usleep(500000);
 	}
 	return NULL;
@@ -123,15 +125,15 @@ void* customer(void* arg)
 void* productor(void* arg)
 {
 	//BlockQueue* q = (BlockQueue*)arg;
-	int tmp = reinterpret_cast<long long>(arg);
+	int tmp = reinterpret_cast<long>(arg);
 	while(1)
 	{
-		//pthread_mutex_lock(&_mutex);
-		q.QueuePush(dataS);
-		dataS++;
-		//pthread_mutex_unlock(&_mutex);
+		pthread_mutex_lock(&_mutex);
+		q.QueuePush(++dataS);
+		//dataS++;
 		//cout<<"~~~("<< (int)arg <<")号生产者放入数据:"<<i<<endl;
 		printf("~~~(%d)号生产者放入数据:%d\n", tmp, dataS);
+		pthread_mutex_unlock(&_mutex);
 		//usleep(500000);
 	}
 	return NULL;
@@ -146,7 +148,7 @@ int main()
 	pthread_mutex_init(&_mutex, NULL);
 	for(int i = 0; i < 3; i++)
 	{
-		void * tmp = reinterpret_cast<void *>(i);
+		void* tmp = reinterpret_cast<void*>(i);
 		if(pthread_create(&ProductorTid[i], NULL, productor, tmp))
 		{
 			cout<<"create Productor thread error"<<endl;
@@ -156,7 +158,7 @@ int main()
 
 	for(int i = 0; i < 6; i++)
 	{
-		void * tmp = reinterpret_cast<void *>(i);
+		void* tmp = reinterpret_cast<void*>(i);
 		if(pthread_create(&CustomersTid[i], NULL, customer, tmp))
 		{
 			cout<<"create thread error"<<endl;
