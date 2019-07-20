@@ -34,6 +34,7 @@ class CloudServer
             srv.set_base_dir(SERVER_BASE_DIR);
             srv.Get("/(list(/){0,1}){0,1}", GetFileList);
             srv.Get("/list/(.*)", GetFileData);
+            srv.Put("/list/(.*)", BackupFile);
             srv.listen(SERVER_ADDR, SERVER_PORT);
             return true;
         }
@@ -96,7 +97,56 @@ class CloudServer
             std::cout << "download success" << std::endl;
         }
         static void BackupFile(const httplib::Request& req, httplib::Response& rsp)
-        {}
+        {
+            std::cout << "BackupFile" << req.path << std::endl;
+            if(!req.has_header("range"))
+            {
+                rsp.status = 400;
+                return;
+            }
+            std::string range = req.get_header_value("Range");
+            int64_t range_start;
+            if(!RangeParse(range, range_start))
+            {
+                rsp.status = 400;
+                return;
+            }
+            std::string realpath = SERVER_BASE_DIR + req.path;
+            std::ofstream file(realpath, std::ios::binary);
+            if(!file.is_open())
+            {
+                std::cerr << "open file " << realpath << " error" << std::endl;
+                rsp.status = 500;
+            }
+
+            file.seekp(range_start, std::ios::beg);
+            file.write(&req.body[0], req.body.size());
+            if(!file.good())
+            {
+                file.close();
+                std::cerr << "file write body error" << std::endl;
+                rsp.status = 500;
+                return;
+            }
+            file.close();
+            return;
+        }
+
+        static bool RangeParse(std::string& range, int64_t& start)
+        {
+            //range: byte=start-end
+            size_t pos1 = range.find("=");
+            size_t pos2 = range.find("-");
+            if(pos1 == std::string::npos || pos2 == std::string::npos)
+            {
+                std::cerr << " range:[" << range << "] formate error" << std::endl;
+                return false;
+            }
+            std::stringstream rs;
+            rs << range.substr(pos1 + 1, pos2 - pos1 - 1);
+            rs >> start;
+            return true;
+        }
 };
 
 int main()
