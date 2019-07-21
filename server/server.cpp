@@ -1,6 +1,8 @@
 #include "httplib.h"
 #include <fstream>
 #include <boost/filesystem.hpp>
+#include <unistd.h>
+#include <fcntl.h>
 
 #define SERVER_BASE_DIR "www"
 #define SERVER_ADDR "0.0.0.0"
@@ -33,7 +35,7 @@ class CloudServer
         {
             srv.set_base_dir(SERVER_BASE_DIR);
             srv.Get("/(list(/){0,1}){0,1}", GetFileList);
-            srv.Get("/list/(.*)", GetFileData);
+            srv.Get("/list/(.*)", DownLoadFile);
             srv.Put("/list/(.*)", BackupFile);
             srv.listen(SERVER_ADDR, SERVER_PORT);
             return true;
@@ -45,9 +47,10 @@ class CloudServer
             bf::directory_iterator item_begin(list);
             bf::directory_iterator item_end;
 
+            std::cout << "文件列表：" << std::endl;
             std::string body;
             body = "<html><body><ol><hr/>";
-            for(; item_begin != item_end; ++item_begin)
+            for(int i = i; item_begin != item_end; ++item_begin,i++)
             {
                 if(bf::is_directory(item_begin->status()))
                 {
@@ -61,13 +64,13 @@ class CloudServer
                 body += "'>";
                 body += file;
                 body += "</a></li></h3>";
-                std::cout << "[filename: " << file << " ]" << std::endl;
+                std::cout << "(" << i << ")[: " << file << " ]" << std::endl;
             }
             body += "<hr/></ol></body></html>";
             rsp.set_content(&body[0], "text/html");
             return;
         }
-        static void GetFileData(const httplib::Request& req, httplib::Response& rsp)
+        static void DownLoadFile(const httplib::Request& req, httplib::Response& rsp)
         {
             std::string file = SERVER_BASE_DIR + req.path;
             if(!bf::exists(file))
@@ -94,11 +97,11 @@ class CloudServer
                 return;
             }
             rsp.set_content(body, "txt/plain");
-            std::cout << "download success" << std::endl;
+            std::cout << "文件：[" << file <<"]下载成功！" << std::endl;
         }
         static void BackupFile(const httplib::Request& req, httplib::Response& rsp)
         {
-            std::cout << "BackupFile" << req.path << std::endl;
+            std::cout << "上传文件：[" << req.path << "]" << std::endl;
             if(!req.has_header("range"))
             {
                 rsp.status = 400;
@@ -111,24 +114,30 @@ class CloudServer
                 rsp.status = 400;
                 return;
             }
+            //std::cout << "上传文件名：[" << req.path << "] 块大小：[" << range << "] 数据：" << req.body << "\n";
             std::string realpath = SERVER_BASE_DIR + req.path;
-            std::ofstream file(realpath, std::ios::binary);
-            if(!file.is_open())
+            int fd = open(realpath.c_str(), O_CREAT|O_WRONLY, 0664);
+            if(fd < 0)
             {
                 std::cerr << "open file " << realpath << " error" << std::endl;
                 rsp.status = 500;
+                return;
             }
-
-            file.seekp(range_start, std::ios::beg);
-            file.write(&req.body[0], req.body.size());
-            if(!file.good())
+            //std::ofstream file(realpath, std::ios::binary);
+            
+            lseek(fd, range_start, SEEK_SET);
+            int ret = write(fd, &req.body[0], req.body.size());
+            if(ret != req.body.size())
             {
-                file.close();
+                close(fd);
                 std::cerr << "file write body error" << std::endl;
                 rsp.status = 500;
                 return;
             }
-            file.close();
+            close(fd);
+            //file.seekp(range_start, std::ios::beg);
+            //file.write(&req.body[0], req.body.size());
+            //file.close();
             return;
         }
 
