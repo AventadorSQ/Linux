@@ -1,9 +1,0 @@
-echo 计算1到10的和:
-count=1
-sum=0
-while [ $count -le 10 ]
-do
-		let sum=sum+count
-		let count=count+1
-done
-echo $sum

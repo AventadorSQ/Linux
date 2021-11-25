@@ -1,6 +1,0 @@
-count=1
-while [ $count -le 10 ]
-do
-		echo $count
-		let count=count+1
-done
